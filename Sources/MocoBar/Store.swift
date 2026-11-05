@@ -59,6 +59,13 @@ final class Store: ObservableObject {
         activities.reduce(0) { $0 + $1.hours + runningSeconds($1) / 3600 }
     }
 
+    /// Uhrzeit, zu der das Tagesziel bei durchlaufender Stoppuhr (ohne weitere Pause) erreicht ist.
+    var goalReachedAt: Date? {
+        guard isCheckedIn else { return nil }
+        let remaining = dailyGoal - bookedHours
+        return remaining > 0 ? now.addingTimeInterval(remaining * 3600) : nil
+    }
+
     static func format(hours: Double) -> String {
         let m = Int((hours * 60).rounded())
         return String(format: "%d:%02d h", m / 60, m % 60)

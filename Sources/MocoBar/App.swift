@@ -204,7 +204,16 @@ struct ContentView: View {
                 Text("heute gebucht").font(.caption).opacity(0.8)
             }
             ProgressView(value: progress).tint(t.isColorful ? .white : (store.isCheckedIn ? .green : t.accent))
-            Text("\(Int(progress * 100)) % von \(store.dailyGoal.formatted()) h").font(.caption2).opacity(0.8)
+            HStack {
+                Text("\(Int(progress * 100)) % von \(store.dailyGoal.formatted()) h")
+                Spacer()
+                if let reached = store.goalReachedAt {
+                    Label("\(store.dailyGoal.formatted()) h erreicht um \(reached.formatted(date: .omitted, time: .shortened))", systemImage: "flag.checkered")
+                } else if store.isCheckedIn {
+                    Label("Ziel erreicht", systemImage: "flag.checkered")
+                }
+            }
+            .font(.caption2).opacity(0.8)
         }
         .foregroundStyle(t.summaryText)
         .padding(14)
