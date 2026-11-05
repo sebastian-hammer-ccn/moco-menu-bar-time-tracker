@@ -214,6 +214,24 @@ struct ContentView: View {
                 }
             }
             .font(.caption2).opacity(0.8)
+            if store.goalReachedAt != nil {
+                HStack(spacing: 6) {
+                    Label("Pause", systemImage: "fork.knife").font(.caption2).opacity(0.8)
+                    Spacer()
+                    ForEach(Store.lunchOptions, id: \.self) { m in
+                        let selected = store.lunchMinutes == m
+                        Button { store.setLunch(m) } label: {
+                            Text("\(m) min")
+                                .font(.caption2.weight(.semibold))
+                                .padding(.horizontal, 8).padding(.vertical, 3)
+                                .foregroundStyle(selected ? (t.isColorful ? Color.blue : t.accentText) : t.summaryText)
+                                .background(Capsule().fill(selected ? (t.isColorful ? Color.white : t.accent) : Color.clear))
+                                .overlay(Capsule().stroke(t.summaryText.opacity(0.35)))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
         }
         .foregroundStyle(t.summaryText)
         .padding(14)

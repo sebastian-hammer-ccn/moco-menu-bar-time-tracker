@@ -10,6 +10,8 @@ final class Store: ObservableObject {
     @AppStorage("dailyGoal") var dailyGoal = 8.0
     @AppStorage("menuIcon") var menuIcon = "clock"
     @AppStorage("menuShowTime") var menuShowTime = false
+    @AppStorage("lunchOverride") var lunchOverride = 60
+    @AppStorage("lunchDay") var lunchDay = ""
     @AppStorage("theme") var themeName = Theme.bunt.rawValue
     @Published var duration = ""
     @Published var note = ""
@@ -59,10 +61,21 @@ final class Store: ObservableObject {
         activities.reduce(0) { $0 + $1.hours + runningSeconds($1) / 3600 }
     }
 
-    /// Uhrzeit, zu der das Tagesziel erreicht ist, wenn ab jetzt ohne Pause gearbeitet wird.
+    static let lunchOptions = [30, 45, 60]
+
+    /// Mittagspause in Minuten: 60, außer die Auswahl wurde heute geändert.
+    var lunchMinutes: Int { lunchDay == MocoClient.today ? lunchOverride : 60 }
+
+    func setLunch(_ minutes: Int) {
+        lunchOverride = minutes
+        lunchDay = MocoClient.today
+        objectWillChange.send()
+    }
+
+    /// Uhrzeit, zu der das Tagesziel erreicht ist: Restzeit plus Mittagspause ab jetzt.
     var goalReachedAt: Date? {
         let remaining = dailyGoal - bookedHours
-        return remaining > 0 ? now.addingTimeInterval(remaining * 3600) : nil
+        return remaining > 0 ? now.addingTimeInterval(remaining * 3600 + Double(lunchMinutes) * 60) : nil
     }
 
     static func format(hours: Double) -> String {
