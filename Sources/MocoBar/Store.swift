@@ -61,9 +61,9 @@ final class Store: ObservableObject {
         activities.reduce(0) { $0 + $1.hours + runningSeconds($1) / 3600 }
     }
 
-    static let lunchOptions = [30, 45, 60]
+    static let lunchOptions = [0, 30, 45, 60]
 
-    /// Mittagspause in Minuten: 60, außer die Auswahl wurde heute geändert.
+    /// Noch ausstehende Mittagspause in Minuten: 60, außer die Auswahl wurde heute geändert (0 = schon gemacht).
     var lunchMinutes: Int { lunchDay == MocoClient.today ? lunchOverride : 60 }
 
     func setLunch(_ minutes: Int) {

@@ -221,7 +221,7 @@ struct ContentView: View {
                     ForEach(Store.lunchOptions, id: \.self) { m in
                         let selected = store.lunchMinutes == m
                         Button { store.setLunch(m) } label: {
-                            Text("\(m) min")
+                            Text(m == 0 ? "gemacht" : "\(m) min")
                                 .font(.caption2.weight(.semibold))
                                 .padding(.horizontal, 8).padding(.vertical, 3)
                                 .foregroundStyle(selected ? (t.isColorful ? Color.blue : t.accentText) : t.summaryText)
