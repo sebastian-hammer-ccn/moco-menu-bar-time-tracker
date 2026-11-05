@@ -34,7 +34,7 @@ cd MocoBar
 open MocoBar.app
 ```
 
-Das Skript baut die App und erzeugt `MocoBar.app` im Projektordner. Zum dauerhaften Nutzen:
+Das Skript baut die App und erzeugt `MocoBar.app` (inklusive App-Icon) im Projektordner. Zum dauerhaften Nutzen:
 
 1. `MocoBar.app` in den Ordner **Programme** ziehen.
 2. Optional für Autostart: **Systemeinstellungen → Allgemein → Anmeldeobjekte** und die App hinzufügen.
@@ -73,6 +73,7 @@ Danach erscheinen Projekt und Aufgabe zur Auswahl. Die letzte Auswahl wird gemer
   - `Store.swift`: Zustand und Logik
   - `MocoClient.swift`: API-Aufrufe
   - `Theme.swift`: Designs
+- App-Icon: `Resources/AppIcon.icns` (Moco-Auge mit Codecamp-Wabe als Iris). Neu erzeugen mit `swift Resources/make-icon.swift`; `build-app.sh` kopiert es ins App-Bundle.
 
 ## Hinweise
 
