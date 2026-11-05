@@ -24,7 +24,7 @@ struct MocoBarApp: App {
         Window("Zeitabgleich", id: "reconcile") {
             ReconcileView().environmentObject(store)
         }
-        .defaultSize(width: 560, height: 520)
+        .defaultSize(width: 480, height: 660)
     }
 }
 
