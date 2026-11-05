@@ -25,7 +25,7 @@ enum ExcelError: LocalizedError {
     case unreadable, noData
     var errorDescription: String? {
         switch self {
-        case .unreadable: return "Die Excel-Datei konnte nicht gelesen werden."
+        case .unreadable: return "Die GFOS-Datei konnte nicht gelesen werden."
         case .noData: return "Keine Zeitbuchungen (Typ LES/ABW) in der Datei gefunden."
         }
     }

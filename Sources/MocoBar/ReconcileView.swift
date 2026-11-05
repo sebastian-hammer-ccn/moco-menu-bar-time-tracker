@@ -46,7 +46,7 @@ struct ReconcileView: View {
             }
             Toggle("Abwesenheit (ABW, z. B. Gleitzeitabbau) zur Sollzeit zählen", isOn: $m.includeAbsence)
                 .font(.caption).foregroundStyle(t.secondaryText)
-            Button { m.importing = true } label: { Label(m.excel.isEmpty ? "Excel wählen" : "Andere Excel wählen", systemImage: "doc.badge.plus") }
+            Button { m.importing = true } label: { Label(m.excel.isEmpty ? "GFOS-Export wählen" : "Anderen GFOS-Export wählen", systemImage: "doc.badge.plus") }
                 .buttonStyle(FilledButtonStyle(theme: t, color: t.isColorful ? .blue : t.accent))
         }
         .padding(14)
@@ -89,8 +89,17 @@ struct ReconcileView: View {
             }
             ProgressView(value: min(1, mocoTotal / max(excelTotal, 0.1)))
                 .tint(t.isColorful ? .white : (good ? .green : .orange))
-            Text("Moco \(Store.format(hours: mocoTotal)) von \(Store.format(hours: excelTotal)) laut Excel")
-                .font(.caption2).opacity(0.8)
+            HStack {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Moco gesamt").font(.caption2).opacity(0.8)
+                    Text(Store.format(hours: mocoTotal)).font(.system(.title3, design: .rounded).weight(.semibold).monospacedDigit())
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text("GFOS gesamt").font(.caption2).opacity(0.8)
+                    Text(Store.format(hours: excelTotal)).font(.system(.title3, design: .rounded).weight(.semibold).monospacedDigit())
+                }
+            }
             if good && !problems.isEmpty {
                 Text("\(problems.count) Tagesabweichung\(problems.count == 1 ? "" : "en") ignoriert, da die Monatsstunden passen")
                     .font(.caption2).opacity(0.8)
@@ -120,7 +129,7 @@ struct ReconcileView: View {
             RoundedRectangle(cornerRadius: 2).fill(t.tint(color)).frame(width: 4, height: 36)
             VStack(alignment: .leading, spacing: 1) {
                 Text(label(r.date)).font(.callout.weight(.semibold)).lineLimit(1).foregroundStyle(t.text)
-                Text(r.spans.isEmpty ? "keine Zeiten im Excel" : r.spans.joined(separator: " · "))
+                Text(r.spans.isEmpty ? "keine Zeiten in GFOS" : r.spans.joined(separator: " · "))
                     .font(.caption).foregroundStyle(t.secondaryText).lineLimit(1)
             }
             Spacer()
@@ -132,7 +141,7 @@ struct ReconcileView: View {
                 } else {
                     Image(systemName: icon).foregroundStyle(color)
                 }
-                Text("Excel \(Store.format(hours: r.excel)) · Moco \(Store.format(hours: r.moco))")
+                Text("GFOS \(Store.format(hours: r.excel)) · Moco \(Store.format(hours: r.moco))")
                     .font(.caption2.monospacedDigit()).foregroundStyle(t.secondaryText)
             }
         }
