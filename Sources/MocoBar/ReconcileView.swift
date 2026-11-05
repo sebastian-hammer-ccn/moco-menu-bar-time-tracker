@@ -16,7 +16,7 @@ struct ReconcileView: View {
     @EnvironmentObject var store: Store
     @StateObject private var m = ReconcileModel()
 
-    private var rows: [ReconcileRow] { ExcelImport.compare(excel: m.excel, moco: m.moco, includeAbsence: m.includeAbsence, dailyGoal: store.dailyGoal) }
+    private var rows: [ReconcileRow] { ExcelImport.compare(excel: m.excel, moco: m.moco, includeAbsence: m.includeAbsence) }
 
     var body: some View {
         let t = store.theme
@@ -125,17 +125,13 @@ struct ReconcileView: View {
 
     private func line(_ r: ReconcileRow) -> some View {
         let t = store.theme
-        let (icon, color, text) = monthMatches ? describe(ReconcileRow(date: r.date, excel: r.excel, absence: r.absence, moco: r.moco, spans: r.spans, reachAt: r.reachAt, status: .ok)) : describe(r)
+        let (icon, color, text) = monthMatches ? describe(ReconcileRow(date: r.date, excel: r.excel, absence: r.absence, moco: r.moco, spans: r.spans, status: .ok)) : describe(r)
         return HStack(spacing: 10) {
             RoundedRectangle(cornerRadius: 2).fill(t.tint(color)).frame(width: 4, height: 36)
             VStack(alignment: .leading, spacing: 1) {
                 Text(label(r.date)).font(.callout.weight(.semibold)).lineLimit(1).foregroundStyle(t.text)
                 Text(r.spans.isEmpty ? "keine Zeiten in GFOS" : r.spans.joined(separator: " · "))
                     .font(.caption).foregroundStyle(t.secondaryText).lineLimit(1)
-                if let reach = r.reachAt {
-                    Label("\(store.dailyGoal.formatted()) h erreicht um \(reach)", systemImage: "flag.checkered")
-                        .font(.caption2.weight(.medium)).foregroundStyle(t.secondaryText)
-                }
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
