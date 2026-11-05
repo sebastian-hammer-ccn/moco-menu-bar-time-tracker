@@ -21,77 +21,118 @@ struct ReconcileView: View {
     var body: some View {
         let t = store.theme
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Button("Excel wählen …") { m.importing = true }
-                if let fileName = m.fileName { Text(fileName).font(.caption).foregroundStyle(t.secondaryText).lineLimit(1) }
-                Spacer()
-                if m.loading { ProgressView().controlSize(.small) }
-            }
-            Toggle("Abwesenheit (ABW, z. B. Gleitzeitabbau) zur Sollzeit zählen", isOn: $m.includeAbsence).font(.caption)
-
+            header
             if let error = m.error {
                 Text(error).font(.caption).foregroundStyle(.white).padding(8)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(RoundedRectangle(cornerRadius: 8).fill(Color.red.opacity(0.7)))
             }
-
             if m.excel.isEmpty {
-                Text("Monatsexport des Zeiterfassungssystems auswählen. Die Zeiten werden pro Tag mit den in Moco gebuchten Stunden verglichen.")
-                    .font(.callout).foregroundStyle(t.secondaryText)
-                Spacer()
+                Card {
+                    Text("Monatsexport des Zeiterfassungssystems auswählen. Die Zeiten werden pro Tag mit den in Moco gebuchten Stunden verglichen.")
+                        .font(.callout).foregroundStyle(t.secondaryText)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                Spacer(minLength: 0)
             } else {
                 summary
-                List(rows) { row in line(row) }
-                    .listStyle(.plain)
+                Card {
+                    ScrollView {
+                        VStack(spacing: 10) {
+                            ForEach(rows) { r in line(r) }
+                        }
+                    }
+                }
             }
+            Toggle("Abwesenheit (ABW, z. B. Gleitzeitabbau) zur Sollzeit zählen", isOn: $m.includeAbsence)
+                .font(.caption).foregroundStyle(t.secondaryText)
+            Button { m.importing = true } label: { Label(m.excel.isEmpty ? "Excel wählen" : "Andere Excel wählen", systemImage: "doc.badge.plus") }
+                .buttonStyle(FilledButtonStyle(theme: t, color: t.isColorful ? .blue : t.accent))
         }
         .padding(14)
-        .frame(minWidth: 520, minHeight: 360)
+        .frame(minWidth: 440, idealWidth: 460, minHeight: 420, idealHeight: 560)
         .themed(t)
         .fileImporter(isPresented: $m.importing, allowedContentTypes: [UTType(filenameExtension: "xlsx") ?? .data]) { result in
             if case .success(let url) = result { Task { await load(url) } }
         }
     }
 
-    private var summary: some View {
-        let problems = rows.filter { $0.status != .ok }
-        let excelTotal = rows.reduce(0) { $0 + $1.excel }
-        let mocoTotal = rows.reduce(0) { $0 + $1.moco }
-        return HStack(spacing: 16) {
-            Label(problems.isEmpty ? "Alles stimmt" : "\(problems.count) Abweichung\(problems.count == 1 ? "" : "en")",
-                  systemImage: problems.isEmpty ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
-                .foregroundStyle(problems.isEmpty ? .green : .orange)
-                .font(.headline)
+    private var header: some View {
+        let t = store.theme
+        return HStack(spacing: 8) {
+            Image(systemName: "checklist").font(.title2).foregroundStyle(t.tint(.blue))
+            Text("Zeitabgleich").font(.system(.title3, design: .rounded).weight(.bold)).foregroundStyle(t.text)
             Spacer()
-            Text("Excel \(Store.format(hours: excelTotal))  ·  Moco \(Store.format(hours: mocoTotal))")
-                .font(.caption.monospacedDigit()).foregroundStyle(store.theme.secondaryText)
+            if m.loading { ProgressView().controlSize(.small) }
         }
     }
 
+    private var summary: some View {
+        let t = store.theme
+        let problems = rows.filter { $0.status != .ok }
+        let excelTotal = rows.reduce(0) { $0 + $1.excel }
+        let mocoTotal = rows.reduce(0) { $0 + $1.moco }
+        let good = problems.isEmpty
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(good ? "Alles stimmt" : "\(problems.count)")
+                    .font(.system(size: 34, weight: .bold, design: .rounded).monospacedDigit())
+                if !good { Text(problems.count == 1 ? "Abweichung" : "Abweichungen").font(.caption).opacity(0.8) }
+                Spacer()
+                Image(systemName: good ? "checkmark.seal.fill" : "exclamationmark.triangle.fill").font(.title2)
+            }
+            ProgressView(value: min(1, mocoTotal / max(excelTotal, 0.1)))
+                .tint(t.isColorful ? .white : (good ? .green : .orange))
+            Text("Moco \(Store.format(hours: mocoTotal)) von \(Store.format(hours: excelTotal)) laut Excel")
+                .font(.caption2).opacity(0.8)
+        }
+        .foregroundStyle(t.summaryText)
+        .padding(14)
+        .background(
+            Group {
+                if t.isColorful {
+                    shape.fill(LinearGradient(colors: good ? [.green, .teal] : [.orange, .pink], startPoint: .topLeading, endPoint: .bottomTrailing))
+                } else {
+                    shape.fill(t.cardFill)
+                }
+            }
+        )
+        .overlay(shape.stroke(t.isColorful ? Color.clear : t.border))
+    }
+
     private func line(_ r: ReconcileRow) -> some View {
+        let t = store.theme
         let (icon, color, text) = describe(r)
-        return HStack(alignment: .top, spacing: 10) {
-            Image(systemName: icon).foregroundStyle(color).frame(width: 18)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label(r.date)).font(.body.weight(.medium))
-                if !r.spans.isEmpty { Text(r.spans.joined(separator: ", ")).font(.caption).foregroundStyle(store.theme.secondaryText) }
+        return HStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 2).fill(t.tint(color)).frame(width: 4, height: 36)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(label(r.date)).font(.callout.weight(.semibold)).lineLimit(1).foregroundStyle(t.text)
+                Text(r.spans.isEmpty ? "keine Zeiten im Excel" : r.spans.joined(separator: " · "))
+                    .font(.caption).foregroundStyle(t.secondaryText).lineLimit(1)
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
-                Text("Excel \(Store.format(hours: r.excel))  Moco \(Store.format(hours: r.moco))").font(.caption.monospacedDigit())
-                if let text { Text(text).font(.caption.weight(.semibold)).foregroundStyle(color) }
+                if let text {
+                    Text(text).font(.caption.weight(.semibold)).foregroundStyle(.white)
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(Capsule().fill(color))
+                } else {
+                    Image(systemName: icon).foregroundStyle(color)
+                }
+                Text("Excel \(Store.format(hours: r.excel)) · Moco \(Store.format(hours: r.moco))")
+                    .font(.caption2.monospacedDigit()).foregroundStyle(t.secondaryText)
             }
         }
-        .padding(.vertical, 2)
     }
 
     private func describe(_ r: ReconcileRow) -> (String, Color, String?) {
         switch r.status {
         case .ok: return ("checkmark.circle.fill", .green, nil)
-        case .tooLittle: return ("minus.circle.fill", .orange, "\(Store.format(hours: -r.diff)) fehlen in Moco")
-        case .tooMuch: return ("plus.circle.fill", .orange, "\(Store.format(hours: r.diff)) zu viel in Moco")
-        case .missingInMoco: return ("xmark.circle.fill", .red, "nichts in Moco gebucht")
-        case .onlyInMoco: return ("questionmark.circle.fill", .red, "nur in Moco, nicht im Excel")
+        case .tooLittle: return ("minus.circle.fill", .orange, "\(Store.format(hours: -r.diff)) fehlen")
+        case .tooMuch: return ("plus.circle.fill", .orange, "\(Store.format(hours: r.diff)) zu viel")
+        case .missingInMoco: return ("xmark.circle.fill", .red, "nicht gebucht")
+        case .onlyInMoco: return ("questionmark.circle.fill", .red, "nur in Moco")
         }
     }
 
