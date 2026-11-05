@@ -6,6 +6,21 @@ struct ExcelDay: Identifiable {
     var worked: Double = 0
     var absence: Double = 0
     var spans: [String] = []
+    var segments: [(from: Double, to: Double, hours: Double)] = []
+
+    /// Uhrzeit (in Minuten ab Mitternacht), zu der `target` Stunden erreicht sind, wenn nach dem letzten Gehen keine Pause mehr folgt.
+    func reachMinutes(target: Double) -> Int? {
+        guard target > 0, !segments.isEmpty else { return nil }
+        var sum = 0.0
+        for s in segments {
+            if sum + s.hours >= target - 0.0001 {
+                return Int(((s.to * 24 - (sum + s.hours - target)) * 60).rounded())
+            }
+            sum += s.hours
+        }
+        guard let last = segments.last else { return nil }
+        return Int(((last.to * 24 + (target - sum)) * 60).rounded())
+    }
 }
 
 enum ReconcileStatus { case ok, tooLittle, tooMuch, missingInMoco, onlyInMoco }
@@ -17,6 +32,7 @@ struct ReconcileRow: Identifiable {
     let absence: Double
     let moco: Double
     let spans: [String]
+    var reachAt: String? = nil
     let status: ReconcileStatus
     var diff: Double { moco - excel }
 }
@@ -54,6 +70,7 @@ enum ExcelImport {
                 day.worked += ist
                 if let a = Double(row[fromCol] ?? ""), let b = Double(row[toCol] ?? "") {
                     day.spans.append("\(clock(a))-\(clock(b))")
+                    day.segments.append((from: a, to: b, hours: ist))
                 }
             case "ABW": day.absence += ist
             default: break
@@ -65,7 +82,7 @@ enum ExcelImport {
         return result
     }
 
-    static func compare(excel: [ExcelDay], moco: [String: Double], includeAbsence: Bool, tolerance: Double = 0.02) -> [ReconcileRow] {
+    static func compare(excel: [ExcelDay], moco: [String: Double], includeAbsence: Bool, dailyGoal: Double = 8, tolerance: Double = 0.02) -> [ReconcileRow] {
         var rows: [ReconcileRow] = []
         let excelDates = Set(excel.map(\.date))
         for d in excel {
@@ -76,7 +93,8 @@ enum ExcelImport {
             else if booked == 0 { status = .missingInMoco }
             else if booked < expected { status = .tooLittle }
             else { status = .tooMuch }
-            rows.append(ReconcileRow(date: d.date, excel: expected, absence: d.absence, moco: booked, spans: d.spans, status: status))
+            let reach = d.reachMinutes(target: dailyGoal - (includeAbsence ? d.absence : 0)).map { String(format: "%02d:%02d", $0 / 60, $0 % 60) }
+            rows.append(ReconcileRow(date: d.date, excel: expected, absence: d.absence, moco: booked, spans: d.spans, reachAt: reach, status: status))
         }
         for (date, hours) in moco where !excelDates.contains(date) && hours > tolerance {
             rows.append(ReconcileRow(date: date, excel: 0, absence: 0, moco: hours, spans: [], status: .onlyInMoco))

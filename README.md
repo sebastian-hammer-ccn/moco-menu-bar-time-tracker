@@ -11,7 +11,7 @@ Kleine macOS-Menüleisten-App, um Zeiten in [Moco](https://www.mocoapp.com) zu e
 - **Tagesübersicht:** gebuchte Stunden heute (laufende Stoppuhr eingerechnet), Fortschritt zum Tagesziel und alle Buchungen des Tages.
 - **Designs:** Bunt, Hell oder Dunkel, einstellbar in den Einstellungen.
 - **Tagesziel:** in den Einstellungen frei wählbar (Standard 8 h).
-- **GFOS-Abgleich:** Das Häkchen-Symbol im Kopfbereich öffnet ein Fenster „Zeitabgleich“. Dort wählst du den Monatsexport aus GFOS (`.xlsx`). Die App vergleicht pro Tag die Arbeitszeit (Zeilen vom Typ `LES`, optional plus Abwesenheit `ABW`) mit den in Moco gebuchten Stunden und markiert fehlende, zu wenige, zu viele oder nur in Moco vorhandene Buchungen. Zusätzlich werden die Gesamtstunden des Monats in Moco und GFOS immer angezeigt und verglichen: Stimmen sie überein, werden Abweichungen einzelner Tage ignoriert.
+- **GFOS-Abgleich:** Das Häkchen-Symbol im Kopfbereich öffnet ein Fenster „Zeitabgleich“. Dort wählst du den Monatsexport aus GFOS (`.xlsx`). Die App vergleicht pro Tag die Arbeitszeit (Zeilen vom Typ `LES`, optional plus Abwesenheit `ABW`) mit den in Moco gebuchten Stunden und markiert fehlende, zu wenige, zu viele oder nur in Moco vorhandene Buchungen. Zusätzlich werden die Gesamtstunden des Monats in Moco und GFOS immer angezeigt und verglichen: Stimmen sie überein, werden Abweichungen einzelner Tage ignoriert. Pro Tag steht außerdem, wann das Tagesziel erreicht ist, wenn nach dem letzten Gehen keine Pause mehr folgt.
 - **Menüleisten-Icon:** aus mehreren Symbolen wählbar, optional mit der laufenden Zeit neben dem Icon.
 
 ## Screenshots
