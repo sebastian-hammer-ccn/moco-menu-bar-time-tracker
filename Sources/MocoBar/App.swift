@@ -31,6 +31,17 @@ struct MocoBarApp: App {
 struct SettingsView: View {
     @EnvironmentObject var store: Store
     @Environment(\.dismiss) private var dismiss
+
+    private func timeBinding(_ minutes: Binding<Int>) -> Binding<Date> {
+        Binding(
+            get: { Calendar.current.date(bySettingHour: minutes.wrappedValue / 60, minute: minutes.wrappedValue % 60, second: 0, of: Date()) ?? Date() },
+            set: {
+                let c = Calendar.current.dateComponents([.hour, .minute], from: $0)
+                minutes.wrappedValue = (c.hour ?? 0) * 60 + (c.minute ?? 0)
+            }
+        )
+    }
+
     var body: some View {
         let theme = store.theme
         VStack(alignment: .leading, spacing: 10) {
@@ -60,6 +71,13 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
                 }
+            }
+            Field(icon: "fork.knife", tint: .yellow) {
+                Text("Mittagspause")
+                Spacer()
+                DatePicker("", selection: timeBinding(store.$lunchStart), displayedComponents: .hourAndMinute).labelsHidden()
+                Text("–")
+                DatePicker("", selection: timeBinding(store.$lunchEnd), displayedComponents: .hourAndMinute).labelsHidden()
             }
             Field(icon: "clock.badge", tint: .teal) {
                 Toggle("Laufende Zeit in der Menüleiste", isOn: store.$menuShowTime).toggleStyle(.switch)
@@ -204,7 +222,20 @@ struct ContentView: View {
                 Text("heute gebucht").font(.caption).opacity(0.8)
             }
             ProgressView(value: progress).tint(t.isColorful ? .white : (store.isCheckedIn ? .green : t.accent))
-            Text("\(Int(progress * 100)) % von \(store.dailyGoal.formatted()) h").font(.caption2).opacity(0.8)
+            HStack {
+                Text("\(Int(progress * 100)) % von \(store.dailyGoal.formatted()) h")
+                Spacer()
+                if let reached = store.goalReachedAt {
+                    Label("\(store.dailyGoal.formatted()) h erreicht um \(reached.formatted(date: .omitted, time: .shortened))", systemImage: "flag.checkered")
+                } else if store.bookedHours >= store.dailyGoal {
+                    Label("Überstunden +\(Store.format(hours: store.bookedHours - store.dailyGoal))", systemImage: "flag.checkered")
+                }
+            }
+            .font(.caption2).opacity(0.8)
+            if store.goalReachedAt != nil && store.pendingLunchMinutes > 0 {
+                Label("inkl. \(store.pendingLunchMinutes) min Mittagspause", systemImage: "fork.knife")
+                    .font(.caption2).opacity(0.8)
+            }
         }
         .foregroundStyle(t.summaryText)
         .padding(14)

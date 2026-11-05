@@ -10,6 +10,11 @@ final class Store: ObservableObject {
     @AppStorage("dailyGoal") var dailyGoal = 8.0
     @AppStorage("menuIcon") var menuIcon = "clock"
     @AppStorage("menuShowTime") var menuShowTime = false
+    @AppStorage("lunchStart") var lunchStart = 12 * 60
+    @AppStorage("lunchEnd") var lunchEnd = 13 * 60
+    @AppStorage("lastStopAt") var lastStopAt = 0.0
+    @AppStorage("gapDay") var gapDay = ""
+    @AppStorage("gapMinutes") var gapMinutes = 0
     @AppStorage("theme") var themeName = Theme.bunt.rawValue
     @Published var duration = ""
     @Published var note = ""
@@ -57,6 +62,35 @@ final class Store: ObservableObject {
 
     var bookedHours: Double {
         activities.reduce(0) { $0 + $1.hours + runningSeconds($1) / 3600 }
+    }
+
+    /// Noch ausstehende Mittagspause in Minuten: Rest des Mittagsfensters, außer heute wurde die Stoppuhr schon für eine Pause unterbrochen.
+    var pendingLunchMinutes: Int {
+        if gapDay == MocoClient.today && gapMinutes >= Store.minGapMinutes { return 0 }
+        let length = lunchEnd - lunchStart
+        guard length > 0 else { return 0 }
+        let c = Calendar.current.dateComponents([.hour, .minute], from: now)
+        let current = (c.hour ?? 0) * 60 + (c.minute ?? 0)
+        return max(0, min(length, lunchEnd - current))
+    }
+
+    static let minGapMinutes = 15
+
+    private func noteTimerStart() {
+        defer { lastStopAt = 0 }
+        guard lastStopAt > 0 else { return }
+        let stop = Date(timeIntervalSince1970: lastStopAt)
+        guard Calendar.current.isDateInToday(stop) else { return }
+        let gap = Int(Date().timeIntervalSince(stop) / 60)
+        guard gap >= Store.minGapMinutes else { return }
+        gapMinutes = (gapDay == MocoClient.today ? gapMinutes : 0) + gap
+        gapDay = MocoClient.today
+    }
+
+    /// Uhrzeit, zu der das Tagesziel erreicht ist: Restzeit plus noch ausstehende Pause.
+    var goalReachedAt: Date? {
+        let remaining = dailyGoal - bookedHours
+        return remaining > 0 ? now.addingTimeInterval(remaining * 3600 + Double(pendingLunchMinutes) * 60) : nil
     }
 
     static func format(hours: Double) -> String {
@@ -108,6 +142,7 @@ final class Store: ObservableObject {
             let existing = activities.first { $0.project?.id == projectId && $0.task?.id == taskId }
             var id = existing?.id ?? 0
             if existing == nil { id = try await client.create(projectId: projectId, taskId: taskId, description: note).id }
+            noteTimerStart()
             _ = try await client.startTimer(id)
             error = nil
         } catch { self.error = error.localizedDescription }
@@ -117,7 +152,7 @@ final class Store: ObservableObject {
     func checkOut() async {
         guard let r = running else { return }
         loading = true
-        do { _ = try await client.stopTimer(r.id); error = nil } catch { self.error = error.localizedDescription }
+        do { _ = try await client.stopTimer(r.id); lastStopAt = Date().timeIntervalSince1970; error = nil } catch { self.error = error.localizedDescription }
         await refresh()
     }
 }
