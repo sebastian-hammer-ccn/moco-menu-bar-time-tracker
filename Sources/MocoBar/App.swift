@@ -20,6 +20,11 @@ struct MocoBarApp: App {
             SettingsView().environmentObject(store)
         }
         .windowResizability(.contentSize)
+
+        Window("Zeitabgleich", id: "reconcile") {
+            ReconcileView().environmentObject(store)
+        }
+        .defaultSize(width: 560, height: 520)
     }
 }
 
@@ -183,6 +188,7 @@ struct ContentView: View {
             Spacer()
             if store.loading { ProgressView().controlSize(.small) }
             Button { Task { await store.refresh() } } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.borderless).foregroundStyle(t.secondaryText)
+            Button { openWindow(id: "reconcile"); NSApp.activate(ignoringOtherApps: true) } label: { Image(systemName: "checklist") }.buttonStyle(.borderless).foregroundStyle(t.secondaryText).help("Mit Excel abgleichen")
             Button { openWindow(id: "settings"); NSApp.activate(ignoringOtherApps: true) } label: { Image(systemName: "gearshape") }.buttonStyle(.borderless).foregroundStyle(t.secondaryText)
         }
     }

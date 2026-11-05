@@ -15,6 +15,7 @@ struct AssignedProject: Decodable, Identifiable, Hashable {
 struct Activity: Decodable, Identifiable {
     struct Named: Decodable { let id: Int?; let name: String }
     let id: Int
+    let date: String?
     let hours: Double
     let timer_started_at: String?
     let description: String?
@@ -64,6 +65,16 @@ struct MocoClient {
 
     func activities() async throws -> [Activity] {
         try await request("GET", "/activities", query: ["from": Self.today, "to": Self.today])
+    }
+
+    func activities(from: String, to: String) async throws -> [Activity] {
+        var all: [Activity] = []
+        for page in 1...20 {
+            let chunk: [Activity] = try await request("GET", "/activities", query: ["from": from, "to": to, "page": String(page)])
+            all += chunk
+            if chunk.count < 100 { break }
+        }
+        return all
     }
 
     func assignedProjects() async throws -> [AssignedProject] {
