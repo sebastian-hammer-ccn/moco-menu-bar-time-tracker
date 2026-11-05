@@ -59,9 +59,8 @@ final class Store: ObservableObject {
         activities.reduce(0) { $0 + $1.hours + runningSeconds($1) / 3600 }
     }
 
-    /// Uhrzeit, zu der das Tagesziel bei durchlaufender Stoppuhr (ohne weitere Pause) erreicht ist.
+    /// Uhrzeit, zu der das Tagesziel erreicht ist, wenn ab jetzt ohne Pause gearbeitet wird.
     var goalReachedAt: Date? {
-        guard isCheckedIn else { return nil }
         let remaining = dailyGoal - bookedHours
         return remaining > 0 ? now.addingTimeInterval(remaining * 3600) : nil
     }
