@@ -2,6 +2,8 @@
 
 Kleine macOS-Menüleisten-App, um Zeiten in [Moco](https://www.mocoapp.com) zu erfassen: Stoppuhr starten und stoppen, Dauern direkt buchen und den Tag auf einen Blick sehen.
 
+> **Hinweis:** Dieses Projekt wurde vollständig von einem KI-Sprachmodell (LLM, GitHub Copilot) generiert. Es ist kein selbst geschriebener Code. Er wurde nicht umfassend geprüft oder getestet. Nutzung auf eigene Verantwortung.
+
 ## Funktionen
 
 - **Start / Stopp:** startet bzw. stoppt die Moco-Stoppuhr für das gewählte Projekt und die gewählte Aufgabe.
