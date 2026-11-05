@@ -209,8 +209,8 @@ struct ContentView: View {
                 Spacer()
                 if let reached = store.goalReachedAt {
                     Label("\(store.dailyGoal.formatted()) h erreicht um \(reached.formatted(date: .omitted, time: .shortened))", systemImage: "flag.checkered")
-                } else if store.isCheckedIn {
-                    Label("Ziel erreicht", systemImage: "flag.checkered")
+                } else if store.bookedHours >= store.dailyGoal {
+                    Label("Überstunden +\(Store.format(hours: store.bookedHours - store.dailyGoal))", systemImage: "flag.checkered")
                 }
             }
             .font(.caption2).opacity(0.8)
