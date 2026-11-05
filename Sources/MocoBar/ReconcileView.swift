@@ -42,6 +42,7 @@ struct ReconcileView: View {
                             ForEach(rows) { r in line(r) }
                         }
                     }
+                    .frame(minHeight: 200, maxHeight: .infinity)
                 }
             }
             Toggle("Abwesenheit (ABW, z. B. Gleitzeitabbau) zur Sollzeit zählen", isOn: $m.includeAbsence)
@@ -50,7 +51,7 @@ struct ReconcileView: View {
                 .buttonStyle(FilledButtonStyle(theme: t, color: t.isColorful ? .blue : t.accent))
         }
         .padding(14)
-        .frame(minWidth: 440, idealWidth: 460, minHeight: 420, idealHeight: 560)
+        .frame(minWidth: 440, idealWidth: 460, minHeight: 560, idealHeight: 640)
         .themed(t)
         .fileImporter(isPresented: $m.importing, allowedContentTypes: [UTType(filenameExtension: "xlsx") ?? .data]) { result in
             if case .success(let url) = result { Task { await load(url) } }
