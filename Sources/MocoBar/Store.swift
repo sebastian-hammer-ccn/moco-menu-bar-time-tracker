@@ -8,6 +8,8 @@ final class Store: ObservableObject {
     @AppStorage("projectId") var projectId = 0
     @AppStorage("taskId") var taskId = 0
     @AppStorage("dailyGoal") var dailyGoal = 8.0
+    @AppStorage("menuIcon") var menuIcon = "clock"
+    @AppStorage("menuShowTime") var menuShowTime = false
     @AppStorage("theme") var themeName = Theme.bunt.rawValue
     @Published var duration = ""
     @Published var note = ""
@@ -32,6 +34,8 @@ final class Store: ObservableObject {
         guard let s = a.timer_started_at else { return nil }
         return ISO8601DateFormatter().date(from: s)
     }
+
+    static let menuIcons = ["clock", "timer", "stopwatch", "hourglass", "briefcase", "calendar"]
 
     var theme: Theme { Theme(rawValue: themeName) ?? .bunt }
     var running: Activity? { activities.first { $0.timer_started_at != nil } }

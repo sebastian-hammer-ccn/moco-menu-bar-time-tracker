@@ -7,7 +7,12 @@ struct MocoBarApp: App {
         MenuBarExtra {
             ContentView().environmentObject(store)
         } label: {
-            Image(systemName: store.isCheckedIn ? "clock.fill" : "clock")
+            HStack(spacing: 4) {
+                Image(systemName: store.menuIcon).symbolVariant(store.isCheckedIn ? .fill : .none)
+                if store.menuShowTime, let r = store.running {
+                    Text(Store.format(hours: store.runningSeconds(r) / 3600))
+                }
+            }
         }
         .menuBarExtraStyle(.window)
 
@@ -38,6 +43,22 @@ struct SettingsView: View {
                     ForEach(Theme.allCases) { Text($0.title).tag($0.rawValue) }
                 }
                 .labelsHidden().pickerStyle(.segmented).frame(width: 170)
+            }
+            Field(icon: "menubar.rectangle", tint: .indigo) {
+                Text("Icon")
+                Spacer()
+                ForEach(Store.menuIcons, id: \.self) { name in
+                    Button { store.menuIcon = name } label: {
+                        Image(systemName: name)
+                            .frame(width: 24, height: 22)
+                            .background(RoundedRectangle(cornerRadius: 6).fill(store.menuIcon == name ? theme.border : Color.clear))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            Field(icon: "clock.badge", tint: .teal) {
+                Toggle("Laufende Zeit in der Menüleiste", isOn: store.$menuShowTime).toggleStyle(.switch)
+                Spacer()
             }
             Button { dismiss(); Task { await store.refresh(); await store.loadProjects() } } label: { Label("Speichern & neu laden", systemImage: "checkmark.circle.fill") }
                 .buttonStyle(FilledButtonStyle(theme: theme, color: .blue))

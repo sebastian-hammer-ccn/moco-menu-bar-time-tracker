@@ -11,6 +11,13 @@ Kleine macOS-Menüleisten-App, um Zeiten in [Moco](https://www.mocoapp.com) zu e
 - **Tagesübersicht:** gebuchte Stunden heute (laufende Stoppuhr eingerechnet), Fortschritt zum Tagesziel und alle Buchungen des Tages.
 - **Designs:** Bunt, Hell oder Dunkel, einstellbar in den Einstellungen.
 - **Tagesziel:** in den Einstellungen frei wählbar (Standard 8 h).
+- **Menüleisten-Icon:** aus mehreren Symbolen wählbar, optional mit der laufenden Zeit neben dem Icon.
+
+## Screenshots
+
+| Menüleisten-Popover | Einstellungen |
+| --- | --- |
+| ![Popover](docs/popover.png) | ![Einstellungen](docs/settings.png) |
 
 ## Voraussetzungen
 
@@ -39,7 +46,7 @@ Beim ersten Start kann macOS die App blockieren, weil sie nur lokal (ad hoc) sig
 1. In der Menüleiste auf das Uhr-Symbol klicken, dann auf das Zahnrad.
 2. **Moco-Domain** eintragen: nur der Teil vor `.mocoapp.com` (bei `https://firma.mocoapp.com` also `firma`).
 3. **API-Key** eintragen. Du findest ihn in Moco unter **Profil → Integrationen**.
-4. Optional Tagesziel und Design einstellen.
+4. Optional Tagesziel, Design und Menüleisten-Icon einstellen.
 5. Auf **Speichern & neu laden** klicken.
 
 Danach erscheinen Projekt und Aufgabe zur Auswahl. Die letzte Auswahl wird gemerkt.
