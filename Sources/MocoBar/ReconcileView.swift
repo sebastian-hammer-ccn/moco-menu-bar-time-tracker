@@ -67,18 +67,23 @@ struct ReconcileView: View {
         }
     }
 
+    private var monthExcel: Double { rows.reduce(0) { $0 + $1.excel } }
+    private var monthMoco: Double { rows.reduce(0) { $0 + $1.moco } }
+    private var monthMatches: Bool { abs(monthMoco - monthExcel) <= 0.05 }
+
     private var summary: some View {
         let t = store.theme
         let problems = rows.filter { $0.status != .ok }
-        let excelTotal = rows.reduce(0) { $0 + $1.excel }
-        let mocoTotal = rows.reduce(0) { $0 + $1.moco }
-        let good = problems.isEmpty
+        let excelTotal = monthExcel
+        let mocoTotal = monthMoco
+        let good = monthMatches
+        let monthDiff = mocoTotal - excelTotal
         let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
         return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
-                Text(good ? "Alles stimmt" : "\(problems.count)")
+                Text(good ? "Monat stimmt" : Store.format(hours: abs(monthDiff)))
                     .font(.system(size: 34, weight: .bold, design: .rounded).monospacedDigit())
-                if !good { Text(problems.count == 1 ? "Abweichung" : "Abweichungen").font(.caption).opacity(0.8) }
+                if !good { Text(monthDiff < 0 ? "fehlen in Moco" : "zu viel in Moco").font(.caption).opacity(0.8) }
                 Spacer()
                 Image(systemName: good ? "checkmark.seal.fill" : "exclamationmark.triangle.fill").font(.title2)
             }
@@ -86,6 +91,13 @@ struct ReconcileView: View {
                 .tint(t.isColorful ? .white : (good ? .green : .orange))
             Text("Moco \(Store.format(hours: mocoTotal)) von \(Store.format(hours: excelTotal)) laut Excel")
                 .font(.caption2).opacity(0.8)
+            if good && !problems.isEmpty {
+                Text("\(problems.count) Tagesabweichung\(problems.count == 1 ? "" : "en") ignoriert, da die Monatsstunden passen")
+                    .font(.caption2).opacity(0.8)
+            } else if !good && !problems.isEmpty {
+                Text("\(problems.count) Tag\(problems.count == 1 ? "" : "e") mit Abweichung")
+                    .font(.caption2).opacity(0.8)
+            }
         }
         .foregroundStyle(t.summaryText)
         .padding(14)
@@ -103,7 +115,7 @@ struct ReconcileView: View {
 
     private func line(_ r: ReconcileRow) -> some View {
         let t = store.theme
-        let (icon, color, text) = describe(r)
+        let (icon, color, text) = monthMatches ? describe(ReconcileRow(date: r.date, excel: r.excel, absence: r.absence, moco: r.moco, spans: r.spans, status: .ok)) : describe(r)
         return HStack(spacing: 10) {
             RoundedRectangle(cornerRadius: 2).fill(t.tint(color)).frame(width: 4, height: 36)
             VStack(alignment: .leading, spacing: 1) {
