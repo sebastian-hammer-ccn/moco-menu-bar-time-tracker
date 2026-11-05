@@ -31,6 +31,17 @@ struct MocoBarApp: App {
 struct SettingsView: View {
     @EnvironmentObject var store: Store
     @Environment(\.dismiss) private var dismiss
+
+    private func timeBinding(_ minutes: Binding<Int>) -> Binding<Date> {
+        Binding(
+            get: { Calendar.current.date(bySettingHour: minutes.wrappedValue / 60, minute: minutes.wrappedValue % 60, second: 0, of: Date()) ?? Date() },
+            set: {
+                let c = Calendar.current.dateComponents([.hour, .minute], from: $0)
+                minutes.wrappedValue = (c.hour ?? 0) * 60 + (c.minute ?? 0)
+            }
+        )
+    }
+
     var body: some View {
         let theme = store.theme
         VStack(alignment: .leading, spacing: 10) {
@@ -60,6 +71,13 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
                 }
+            }
+            Field(icon: "fork.knife", tint: .yellow) {
+                Text("Mittagspause")
+                Spacer()
+                DatePicker("", selection: timeBinding(store.$lunchStart), displayedComponents: .hourAndMinute).labelsHidden()
+                Text("–")
+                DatePicker("", selection: timeBinding(store.$lunchEnd), displayedComponents: .hourAndMinute).labelsHidden()
             }
             Field(icon: "clock.badge", tint: .teal) {
                 Toggle("Laufende Zeit in der Menüleiste", isOn: store.$menuShowTime).toggleStyle(.switch)
@@ -214,23 +232,9 @@ struct ContentView: View {
                 }
             }
             .font(.caption2).opacity(0.8)
-            if store.goalReachedAt != nil {
-                HStack(spacing: 6) {
-                    Label("Pause", systemImage: "fork.knife").font(.caption2).opacity(0.8)
-                    Spacer()
-                    ForEach(Store.lunchOptions, id: \.self) { m in
-                        let selected = store.lunchMinutes == m
-                        Button { store.setLunch(m) } label: {
-                            Text(m == 0 ? "gemacht" : "\(m) min")
-                                .font(.caption2.weight(.semibold))
-                                .padding(.horizontal, 8).padding(.vertical, 3)
-                                .foregroundStyle(selected ? (t.isColorful ? Color.blue : t.accentText) : t.summaryText)
-                                .background(Capsule().fill(selected ? (t.isColorful ? Color.white : t.accent) : Color.clear))
-                                .overlay(Capsule().stroke(t.summaryText.opacity(0.35)))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
+            if store.goalReachedAt != nil && store.pendingLunchMinutes > 0 {
+                Label("inkl. \(store.pendingLunchMinutes) min Mittagspause", systemImage: "fork.knife")
+                    .font(.caption2).opacity(0.8)
             }
         }
         .foregroundStyle(t.summaryText)
