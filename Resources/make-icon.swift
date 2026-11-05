@@ -14,25 +14,28 @@ func render(_ size: Int) -> Data {
     NSColor(red: 0.95, green: 0.98, blue: 0.99, alpha: 1).setFill(); bg.fill()
     NSColor(red: 0.8, green: 0.88, blue: 0.9, alpha: 1).setStroke(); bg.lineWidth = s * 0.004; bg.stroke()
 
-    let r = s * 0.125, k: CGFloat = 1.07
-    let h = sqrt(3) / 2 * r
-    let cells: [(CGFloat, CGFloat, NSColor)] = [
-        (0, h, NSColor(red: 0.42, green: 0.69, blue: 0.76, alpha: 1)),
-        (-1.5 * r, 0, NSColor(red: 0.0, green: 0.44, blue: 0.56, alpha: 1)),
-        (1.5 * r, 0, NSColor(red: 0.60, green: 0.80, blue: 0.86, alpha: 1)),
-        (0, -h, NSColor(red: 0.20, green: 0.56, blue: 0.66, alpha: 1)),
-    ]
-    for (dx, dy, color) in cells {
-        let cx = s / 2 + dx * k, cy = s / 2 + dy * k
+    let c = NSPoint(x: s / 2, y: s / 2)
+    func circle(_ rad: CGFloat, _ off: NSPoint = .zero, _ color: NSColor) {
+        color.setFill()
+        NSBezierPath(ovalIn: NSRect(x: c.x + off.x - rad, y: c.y + off.y - rad, width: 2 * rad, height: 2 * rad)).fill()
+    }
+    func hexagon(_ r: CGFloat, _ color: NSColor) {
         let p = NSBezierPath()
         for i in 0..<6 {
-            let a = CGFloat(i) * .pi / 3
-            let pt = NSPoint(x: cx + r * cos(a), y: cy + r * sin(a))
+            let a = CGFloat(i) * .pi / 3 + .pi / 6
+            let pt = NSPoint(x: c.x + r * cos(a), y: c.y + r * sin(a))
             i == 0 ? p.move(to: pt) : p.line(to: pt)
         }
-        p.close(); p.lineJoinStyle = .round
-        color.setFill(); p.fill()
+        p.close(); p.lineJoinStyle = .round; p.lineWidth = r * 0.06
+        color.setFill(); color.setStroke(); p.fill(); p.stroke()
     }
+    let teal = NSColor(red: 0.0, green: 0.44, blue: 0.56, alpha: 1)
+    circle(s * 0.40, .zero, .black)
+    circle(s * 0.31, .zero, .white)
+    hexagon(s * 0.235, teal)
+    hexagon(s * 0.235 * 0.62, NSColor(red: 0.20, green: 0.56, blue: 0.66, alpha: 1))
+    circle(s * 0.105, .zero, .black)
+    circle(s * 0.065, NSPoint(x: -s * 0.12, y: s * 0.12), .white)
     NSGraphicsContext.restoreGraphicsState()
     return rep.representation(using: .png, properties: [:])!
 }
