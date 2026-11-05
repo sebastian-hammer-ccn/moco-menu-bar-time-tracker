@@ -30,6 +30,14 @@ final class Store: ObservableObject {
         Task { await refresh(); await loadProjects() }
     }
 
+    func mocoHoursByDay(from: String, to: String) async throws -> [String: Double] {
+        var result: [String: Double] = [:]
+        for a in try await client.activities(from: from, to: to) {
+            if let d = a.date { result[d, default: 0] += a.hours }
+        }
+        return result
+    }
+
     private func started(_ a: Activity) -> Date? {
         guard let s = a.timer_started_at else { return nil }
         return ISO8601DateFormatter().date(from: s)
