@@ -12,6 +12,10 @@ Kleine macOS-Menüleisten-App, um Zeiten in [Moco](https://www.mocoapp.com) zu e
 - **Designs:** Bunt, Hell oder Dunkel, einstellbar in den Einstellungen.
 - **Tagesziel:** in den Einstellungen frei wählbar (Standard 8 h).
 - **GFOS-Abgleich:** Das Häkchen-Symbol im Kopfbereich öffnet ein Fenster „Zeitabgleich“. Dort wählst du den Monatsexport aus GFOS (`.xlsx`). Die App vergleicht pro Tag die Arbeitszeit (Zeilen vom Typ `LES`, optional plus Abwesenheit `ABW`) mit den in Moco gebuchten Stunden und markiert fehlende, zu wenige, zu viele oder nur in Moco vorhandene Buchungen. Zusätzlich werden die Gesamtstunden des Monats in Moco und GFOS immer angezeigt und verglichen: Stimmen sie überein, werden Abweichungen einzelner Tage ignoriert.
+- **Neuer Tag:** Wechselt das Datum (z. B. über Nacht), lädt die Oberfläche automatisch neu.
+- **Feierabend-Feier:** Sobald bei laufender Stoppuhr das Tagesziel erreicht ist, gibt es einmal pro Tag eine Benachrichtigung und Konfetti über den Bildschirm. Beim ersten Start fragt macOS nach der Erlaubnis für Benachrichtigungen.
+- **Gebuchte Zeiten:** Das Kalender-Symbol im Kopfbereich öffnet eine Ansicht, in der du per Pfeilen oder Datumswähler beliebige vergangene Tage ansehen kannst (Buchungen mit Projekt, Aufgabe, Notiz, Tagessumme). Dauer und Notiz lassen sich dort ändern, Buchungen auch löschen (nicht bei laufender Stoppuhr).
+- **Autostart:** Beim ersten Start wird MocoBar für den Login registriert. Der Schalter „Beim Login starten“ in den Einstellungen ändert das jederzeit.
 - **Menüleisten-Icon:** aus mehreren Symbolen wählbar, optional mit der laufenden Zeit neben dem Icon.
 
 ## Screenshots
@@ -38,7 +42,7 @@ open MocoBar.app
 Das Skript baut die App und erzeugt `MocoBar.app` (inklusive App-Icon) im Projektordner. Zum dauerhaften Nutzen:
 
 1. `MocoBar.app` in den Ordner **Programme** ziehen.
-2. Optional für Autostart: **Systemeinstellungen → Allgemein → Anmeldeobjekte** und die App hinzufügen.
+2. Autostart wird beim ersten Start automatisch aktiviert (abschaltbar in den Einstellungen). Das funktioniert am zuverlässigsten, wenn die App in **Programme** liegt.
 
 Beim ersten Start kann macOS die App blockieren, weil sie nur lokal (ad hoc) signiert ist. Dann Rechtsklick auf die App → **Öffnen**, oder unter **Systemeinstellungen → Datenschutz & Sicherheit** „Trotzdem öffnen“ wählen.
 
@@ -59,6 +63,7 @@ Danach erscheinen Projekt und Aufgabe zur Auswahl. Die letzte Auswahl wird gemer
 | Stoppuhr starten | Projekt und Aufgabe wählen, **Start** |
 | Stoppuhr beenden | **Stopp** |
 | Zeit nachtragen | Dauer eintippen (z. B. `2h`), optional Notiz, **Dauer buchen** |
+| Vergangene Tage ansehen/bearbeiten | Kalender-Symbol im Kopfbereich |
 | Daten neu laden | Aktualisieren-Symbol im Kopfbereich |
 
 ## Technik
@@ -68,11 +73,14 @@ Danach erscheinen Projekt und Aufgabe zur Auswahl. Die letzte Auswahl wird gemer
   - `GET /activities` für die Buchungen des Tages
   - `GET /projects/assigned` für Projekte und Aufgaben
   - `POST /activities` zum Anlegen von Buchungen
+  - `PUT /activities/{id}` und `DELETE /activities/{id}` zum Ändern und Löschen
   - `PATCH /activities/{id}/start_timer` und `/stop_timer` für die Stoppuhr
 - Struktur: `Sources/MocoBar/`
   - `App.swift`: Menüleiste, Oberfläche, Einstellungsfenster
   - `Store.swift`: Zustand und Logik
   - `MocoClient.swift`: API-Aufrufe
+  - `HistoryView.swift`: Ansicht „Gebuchte Zeiten“
+  - `Celebration.swift`: Benachrichtigung und Konfetti
   - `Theme.swift`: Designs
 - App-Icon: `Resources/AppIcon.icns` (Moco-Auge mit Codecamp-Wabe als Iris). Neu erzeugen mit `swift Resources/make-icon.swift`; `build-app.sh` kopiert es ins App-Bundle.
 

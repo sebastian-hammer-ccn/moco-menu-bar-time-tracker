@@ -21,6 +21,11 @@ struct MocoBarApp: App {
         }
         .windowResizability(.contentSize)
 
+        Window("Gebuchte Zeiten", id: "history") {
+            HistoryView().environmentObject(store)
+        }
+        .defaultSize(width: 420, height: 460)
+
         Window("Zeitabgleich", id: "reconcile") {
             ReconcileView().environmentObject(store)
         }
@@ -81,6 +86,10 @@ struct SettingsView: View {
             }
             Field(icon: "clock.badge", tint: .teal) {
                 Toggle("Laufende Zeit in der Menüleiste", isOn: store.$menuShowTime).toggleStyle(.switch)
+                Spacer()
+            }
+            Field(icon: "power", tint: .red) {
+                Toggle("Beim Login starten", isOn: Binding(get: { store.launchAtLogin }, set: { store.setLaunchAtLogin($0) })).toggleStyle(.switch)
                 Spacer()
             }
             Button { dismiss(); Task { await store.refresh(); await store.loadProjects() } } label: { Label("Speichern & neu laden", systemImage: "checkmark.circle.fill") }
@@ -206,6 +215,7 @@ struct ContentView: View {
             Spacer()
             if store.loading { ProgressView().controlSize(.small) }
             Button { Task { await store.refresh() } } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.borderless).foregroundStyle(t.secondaryText)
+            Button { openWindow(id: "history"); NSApp.activate(ignoringOtherApps: true) } label: { Image(systemName: "calendar") }.buttonStyle(.borderless).foregroundStyle(t.secondaryText).help("Gebuchte Zeiten ansehen")
             Button { openWindow(id: "reconcile"); NSApp.activate(ignoringOtherApps: true) } label: { Image(systemName: "checklist") }.buttonStyle(.borderless).foregroundStyle(t.secondaryText).help("Mit Excel abgleichen")
             Button { openWindow(id: "settings"); NSApp.activate(ignoringOtherApps: true) } label: { Image(systemName: "gearshape") }.buttonStyle(.borderless).foregroundStyle(t.secondaryText)
         }

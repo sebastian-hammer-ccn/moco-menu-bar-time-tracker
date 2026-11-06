@@ -23,6 +23,8 @@ struct Activity: Decodable, Identifiable {
     let task: Named?
 }
 
+struct Empty: Decodable {}
+
 enum MocoError: LocalizedError {
     case notConfigured, http(Int, String)
     var errorDescription: String? {
@@ -53,7 +55,7 @@ struct MocoClient {
         guard (200..<300).contains(code) else {
             throw MocoError.http(code, "\(method) \(comps.url!.absoluteString) \(String(data: data, encoding: .utf8) ?? "")")
         }
-        return try JSONDecoder().decode(T.self, from: data)
+        return try JSONDecoder().decode(T.self, from: data.isEmpty ? Data("{}".utf8) : data)
     }
 
     static var today: String {
@@ -84,6 +86,12 @@ struct MocoClient {
     func create(projectId: Int, taskId: Int, seconds: Int = 0, description: String = "") async throws -> Activity {
         try await request("POST", "/activities", body: ["date": Self.today, "project_id": projectId, "task_id": taskId, "hours": Double(seconds) / 3600, "description": description])
     }
+
+    func update(_ id: Int, seconds: Int, description: String) async throws -> Activity {
+        try await request("PUT", "/activities/\(id)", body: ["hours": Double(seconds) / 3600, "description": description])
+    }
+
+    func delete(_ id: Int) async throws { let _: Empty = try await request("DELETE", "/activities/\(id)") }
 
     func startTimer(_ id: Int) async throws -> Activity { try await request("PATCH", "/activities/\(id)/start_timer") }
     func stopTimer(_ id: Int) async throws -> Activity { try await request("PATCH", "/activities/\(id)/stop_timer") }

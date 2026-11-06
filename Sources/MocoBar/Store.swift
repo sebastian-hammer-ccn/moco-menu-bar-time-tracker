@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import ServiceManagement
 
 @MainActor
 final class Store: ObservableObject {
@@ -16,6 +17,7 @@ final class Store: ObservableObject {
     @AppStorage("gapDay") var gapDay = ""
     @AppStorage("gapMinutes") var gapMinutes = 0
     @AppStorage("theme") var themeName = Theme.bunt.rawValue
+    @AppStorage("celebratedDay") var celebratedDay = ""
     @Published var duration = ""
     @Published var note = ""
     @Published var projects: [AssignedProject] = []
@@ -26,13 +28,61 @@ final class Store: ObservableObject {
     @Published var now = Date()
 
     private var timer: Timer?
+    private var currentDay = MocoClient.today
     private var client: MocoClient { MocoClient(domain: domain.trimmingCharacters(in: .whitespaces), apiKey: apiKey.trimmingCharacters(in: .whitespaces)) }
 
     init() {
         timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.now = Date() }
+            Task { @MainActor in self?.tick() }
         }
+        Celebration.requestAuthorization()
+        enableLaunchAtLogin()
         Task { await refresh(); await loadProjects() }
+    }
+
+    private func tick() {
+        now = Date()
+        let day = MocoClient.today
+        if day != currentDay {
+            currentDay = day
+            Task { await refresh() }
+            return
+        }
+        if running != nil, bookedHours >= dailyGoal, celebratedDay != day {
+            celebratedDay = day
+            Celebration.goalReached(hours: bookedHours)
+        }
+    }
+
+    var launchAtLogin: Bool { SMAppService.mainApp.status == .enabled }
+
+    func setLaunchAtLogin(_ on: Bool) {
+        do {
+            if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+        } catch { self.error = "Autostart: \(error.localizedDescription)" }
+        objectWillChange.send()
+    }
+
+    /// Beim ersten Start automatisch aktivieren; danach gilt die Wahl des Nutzers.
+    private func enableLaunchAtLogin() {
+        let key = "launchAtLoginInitialized"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        UserDefaults.standard.set(true, forKey: key)
+        if SMAppService.mainApp.status != .enabled { setLaunchAtLogin(true) }
+    }
+
+    func activities(on day: String) async throws -> [Activity] {
+        try await client.activities(from: day, to: day)
+    }
+
+    func updateActivity(_ id: Int, seconds: Int, description: String) async throws {
+        _ = try await client.update(id, seconds: seconds, description: description)
+        await refresh()
+    }
+
+    func deleteActivity(_ id: Int) async throws {
+        try await client.delete(id)
+        await refresh()
     }
 
     func mocoHoursByDay(from: String, to: String) async throws -> [String: Double] {
