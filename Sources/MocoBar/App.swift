@@ -92,7 +92,7 @@ struct SettingsView: View {
                 }
             }
             Field(icon: "fork.knife", tint: .yellow) {
-                Text("Mittagspause")
+                Text("Mittagspause").lineLimit(1).fixedSize()
                 Spacer()
                 DatePicker("", selection: timeBinding(store.$lunchStart), displayedComponents: .hourAndMinute).labelsHidden()
                 Text("–")
@@ -104,17 +104,18 @@ struct SettingsView: View {
                 Picker("Menüleiste", selection: Binding(get: { store.menuDisplay }, set: { store.menuDisplay = $0 })) {
                     ForEach(Store.MenuDisplay.allCases) { Text($0.title).tag($0) }
                 }
-                .labelsHidden().frame(width: 190)
+                .labelsHidden().frame(width: 170)
             }
             Field(icon: "power", tint: .red) {
-                Toggle("Beim Login starten", isOn: Binding(get: { store.launchAtLogin }, set: { store.setLaunchAtLogin($0) })).toggleStyle(.switch)
+                Text("Beim Login starten").lineLimit(1)
                 Spacer()
+                Toggle("", isOn: Binding(get: { store.launchAtLogin }, set: { store.setLaunchAtLogin($0) })).toggleStyle(.switch).labelsHidden()
             }
             Button { dismiss(); Task { await store.refresh(); await store.loadProjects() } } label: { Label("Speichern & neu laden", systemImage: "checkmark.circle.fill") }
                 .buttonStyle(FilledButtonStyle(theme: theme, color: .blue))
         }
         .padding(20)
-        .frame(width: 340)
+        .frame(width: 380)
         .themed(theme)
     }
 }
