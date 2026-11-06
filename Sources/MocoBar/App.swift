@@ -9,9 +9,7 @@ struct MocoBarApp: App {
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: store.menuIcon).symbolVariant(store.isCheckedIn ? .fill : .none)
-                if store.menuShowTime, let r = store.running {
-                    Text(Store.format(hours: store.runningSeconds(r) / 3600))
-                }
+                if let text = store.menuText { Text(text) }
             }
         }
         .menuBarExtraStyle(.window)
@@ -57,6 +55,22 @@ struct SettingsView: View {
                 Spacer()
                 TextField("8", value: store.$dailyGoal, format: .number).textFieldStyle(.plain).frame(width: 50).multilineTextAlignment(.trailing)
             }
+            Field(icon: "calendar", tint: .green) {
+                Text("Ziel pro Wochentag").lineLimit(1)
+                Spacer()
+                Toggle("", isOn: store.$weekdayGoalsOn).toggleStyle(.switch).labelsHidden()
+            }
+            if store.weekdayGoalsOn {
+                HStack(spacing: 4) {
+                    ForEach(0..<7, id: \.self) { i in
+                        VStack(spacing: 2) {
+                            Text(Store.weekdayNames[i]).font(.caption2).foregroundStyle(theme.secondaryText)
+                            TextField("0", value: Binding(get: { store.weekdayGoals[i] }, set: { store.setWeekdayGoal(i, $0) }), format: .number)
+                                .textFieldStyle(.roundedBorder).multilineTextAlignment(.center)
+                        }
+                    }
+                }
+            }
             Field(icon: "paintpalette.fill", tint: .pink) {
                 Text("Design")
                 Spacer()
@@ -85,8 +99,12 @@ struct SettingsView: View {
                 DatePicker("", selection: timeBinding(store.$lunchEnd), displayedComponents: .hourAndMinute).labelsHidden()
             }
             Field(icon: "clock.badge", tint: .teal) {
-                Toggle("Laufende Zeit in der Menüleiste", isOn: store.$menuShowTime).toggleStyle(.switch)
+                Text("Menüleiste").lineLimit(1).fixedSize()
                 Spacer()
+                Picker("Menüleiste", selection: Binding(get: { store.menuDisplay }, set: { store.menuDisplay = $0 })) {
+                    ForEach(Store.MenuDisplay.allCases) { Text($0.title).tag($0) }
+                }
+                .labelsHidden().frame(width: 190)
             }
             Field(icon: "power", tint: .red) {
                 Toggle("Beim Login starten", isOn: Binding(get: { store.launchAtLogin }, set: { store.setLaunchAtLogin($0) })).toggleStyle(.switch)
@@ -223,7 +241,8 @@ struct ContentView: View {
 
     private var summary: some View {
         let t = store.theme
-        let progress = min(1, store.bookedHours / max(store.dailyGoal, 0.1))
+        let goal = store.goalToday
+        let progress = min(1, store.bookedHours / max(goal, 0.1))
         let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
         return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
@@ -233,12 +252,12 @@ struct ContentView: View {
             }
             ProgressView(value: progress).tint(t.isColorful ? .white : (store.isCheckedIn ? .green : t.accent))
             HStack {
-                Text("\(Int(progress * 100)) % von \(store.dailyGoal.formatted()) h")
+                Text("\(Int(progress * 100)) % von \(goal.formatted()) h")
                 Spacer()
                 if let reached = store.goalReachedAt {
-                    Label("\(store.dailyGoal.formatted()) h erreicht um \(reached.formatted(date: .omitted, time: .shortened))", systemImage: "flag.checkered")
-                } else if store.bookedHours >= store.dailyGoal {
-                    Label("Überstunden +\(Store.format(hours: store.bookedHours - store.dailyGoal))", systemImage: "flag.checkered")
+                    Label("\(goal.formatted()) h erreicht um \(reached.formatted(date: .omitted, time: .shortened))", systemImage: "flag.checkered")
+                } else if store.bookedHours >= goal {
+                    Label("Überstunden +\(Store.format(hours: store.bookedHours - goal))", systemImage: "flag.checkered")
                 }
             }
             .font(.caption2).opacity(0.8)

@@ -11,6 +11,62 @@ final class Store: ObservableObject {
     @AppStorage("dailyGoal") var dailyGoal = 8.0
     @AppStorage("menuIcon") var menuIcon = "clock"
     @AppStorage("menuShowTime") var menuShowTime = false
+    @AppStorage("menuDisplay") var menuDisplayRaw = ""
+    @AppStorage("weekdayGoalsOn") var weekdayGoalsOn = false
+    @AppStorage("weekdayGoals") var weekdayGoalsRaw = ""
+
+    enum MenuDisplay: String, CaseIterable, Identifiable {
+        case none, running, worked, remaining
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .none: "Nur Icon"
+            case .running: "Laufende Zeit"
+            case .worked: "Gearbeitet + %"
+            case .remaining: "Noch bis Feierabend"
+            }
+        }
+    }
+
+    var menuDisplay: MenuDisplay {
+        get { MenuDisplay(rawValue: menuDisplayRaw) ?? (menuShowTime ? .running : .none) }
+        set { menuDisplayRaw = newValue.rawValue }
+    }
+
+    var menuText: String? {
+        switch menuDisplay {
+        case .none: return nil
+        case .running: return running.map { Store.format(hours: runningSeconds($0) / 3600) }
+        case .worked:
+            let pct = Int(bookedHours / max(goalToday, 0.1) * 100)
+            return "\(Store.format(hours: bookedHours)) · \(pct) %"
+        case .remaining:
+            let rest = goalToday - bookedHours
+            return rest > 0 ? "noch " + Store.format(hours: rest) : "+" + Store.format(hours: -rest)
+        }
+    }
+
+    static let weekdayNames = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+
+    /// Tagesziele Montag bis Sonntag; ohne gespeicherte Werte gilt das Tagesziel für Mo–Fr.
+    var weekdayGoals: [Double] {
+        let parsed = weekdayGoalsRaw.split(separator: ",", omittingEmptySubsequences: false).map { Double($0) }
+        return (0..<7).map { i in
+            if i < parsed.count, let v = parsed[i] { return v }
+            return i < 5 ? dailyGoal : 0
+        }
+    }
+
+    func setWeekdayGoal(_ index: Int, _ value: Double) {
+        var g = weekdayGoals
+        g[index] = max(0, value)
+        weekdayGoalsRaw = g.map { String($0) }.joined(separator: ",")
+    }
+
+    var goalToday: Double {
+        guard weekdayGoalsOn else { return dailyGoal }
+        return weekdayGoals[(Calendar.current.component(.weekday, from: now) + 5) % 7]
+    }
     @AppStorage("lunchStart") var lunchStart = 12 * 60
     @AppStorage("lunchEnd") var lunchEnd = 13 * 60
     @AppStorage("lastStopAt") var lastStopAt = 0.0
@@ -48,7 +104,7 @@ final class Store: ObservableObject {
             Task { await refresh() }
             return
         }
-        if running != nil, bookedHours >= dailyGoal, celebratedDay != day {
+        if running != nil, goalToday > 0, bookedHours >= goalToday, celebratedDay != day {
             celebratedDay = day
             Celebration.goalReached(hours: bookedHours)
         }
@@ -139,7 +195,7 @@ final class Store: ObservableObject {
 
     /// Uhrzeit, zu der das Tagesziel erreicht ist: Restzeit plus noch ausstehende Pause.
     var goalReachedAt: Date? {
-        let remaining = dailyGoal - bookedHours
+        let remaining = goalToday - bookedHours
         return remaining > 0 ? now.addingTimeInterval(remaining * 3600 + Double(pendingLunchMinutes) * 60) : nil
     }
 
