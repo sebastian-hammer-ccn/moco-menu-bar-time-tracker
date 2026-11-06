@@ -24,6 +24,10 @@ Kleine macOS-Menüleisten-App, um Zeiten in [Moco](https://www.mocoapp.com) zu e
 | --- | --- |
 | ![Popover](docs/popover.png) | ![Einstellungen](docs/settings.png) |
 
+| Gebuchte Zeiten | Zeitabgleich |
+| --- | --- |
+| ![Gebuchte Zeiten](docs/history.png) | ![Zeitabgleich](docs/reconcile.png) |
+
 ## Voraussetzungen
 
 - macOS 13 oder neuer
