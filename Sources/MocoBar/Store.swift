@@ -2,10 +2,19 @@ import Foundation
 import SwiftUI
 import ServiceManagement
 
+struct TimeFavorite: Codable, Identifiable, Equatable {
+    let id: String
+    let projectId: Int
+    let taskId: Int
+    let projectName: String
+    let taskName: String
+    let note: String
+}
+
 @MainActor
 final class Store: ObservableObject {
     @AppStorage("domain") var domain = ""
-    @AppStorage("apiKey") var apiKey = ""
+    @AppStorage("timeFavorites") private var timeFavoritesRaw = "[]"
     @AppStorage("projectId") var projectId = 0
     @AppStorage("taskId") var taskId = 0
     @AppStorage("dailyGoal") var dailyGoal = 8.0
@@ -64,8 +73,12 @@ final class Store: ObservableObject {
     }
 
     var goalToday: Double {
+        goal(on: now)
+    }
+
+    func goal(on date: Date) -> Double {
         guard weekdayGoalsOn else { return dailyGoal }
-        return weekdayGoals[(Calendar.current.component(.weekday, from: now) + 5) % 7]
+        return weekdayGoals[(Calendar.current.component(.weekday, from: date) + 5) % 7]
     }
     @AppStorage("lunchStart") var lunchStart = 12 * 60
     @AppStorage("lunchEnd") var lunchEnd = 13 * 60
@@ -76,9 +89,11 @@ final class Store: ObservableObject {
     @AppStorage("celebratedDay") var celebratedDay = ""
     @Published var duration = ""
     @Published var note = ""
+    @Published var apiKey = ""
     @Published var projects: [AssignedProject] = []
     @Published var activities: [Activity] = []
     @Published var error: String?
+    @Published var credentialError: String?
     @Published var loading = false
     @Published var showSettings = false
     @Published var now = Date()
@@ -87,13 +102,107 @@ final class Store: ObservableObject {
     private var currentDay = MocoClient.today
     private var client: MocoClient { MocoClient(domain: domain.trimmingCharacters(in: .whitespaces), apiKey: apiKey.trimmingCharacters(in: .whitespaces)) }
 
+    var favorites: [TimeFavorite] {
+        get {
+            guard let data = timeFavoritesRaw.data(using: .utf8),
+                  let decoded = try? JSONDecoder().decode([TimeFavorite].self, from: data) else { return [] }
+            return decoded
+        }
+        set {
+            guard let data = try? JSONEncoder().encode(newValue),
+                  let encoded = String(data: data, encoding: .utf8) else { return }
+            timeFavoritesRaw = encoded
+        }
+    }
+
     init() {
+        loadAPIKey()
         timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.tick() }
         }
         Celebration.requestAuthorization()
         enableLaunchAtLogin()
         Task { await refresh(); await loadProjects() }
+    }
+
+    private func loadAPIKey() {
+        do {
+            if let stored = try KeychainStore.load() {
+                apiKey = stored
+                UserDefaults.standard.removeObject(forKey: "apiKey")
+            } else if let legacy = UserDefaults.standard.string(forKey: "apiKey"), !legacy.isEmpty {
+                try KeychainStore.save(legacy)
+                apiKey = legacy
+                UserDefaults.standard.removeObject(forKey: "apiKey")
+            }
+        } catch {
+            credentialError = error.localizedDescription
+        }
+    }
+
+    @discardableResult
+    func setAPIKey(_ value: String) -> Bool {
+        let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            if value.isEmpty {
+                try KeychainStore.delete()
+            } else {
+                try KeychainStore.save(value)
+            }
+            apiKey = value
+            UserDefaults.standard.removeObject(forKey: "apiKey")
+            credentialError = nil
+            return true
+        } catch {
+            credentialError = error.localizedDescription
+            return false
+        }
+    }
+
+    func addFavorite() {
+        guard selectionValid,
+              let project = selectedProject,
+              let task = project.tasks.first(where: { $0.id == taskId }) else { return }
+        let favorite = TimeFavorite(
+            id: UUID().uuidString,
+            projectId: project.id,
+            taskId: task.id,
+            projectName: project.name,
+            taskName: task.name,
+            note: note.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+        var saved = favorites
+        if let index = saved.firstIndex(where: {
+            $0.projectId == favorite.projectId && $0.taskId == favorite.taskId && $0.note == favorite.note
+        }) {
+            saved[index] = TimeFavorite(
+                id: saved[index].id,
+                projectId: favorite.projectId,
+                taskId: favorite.taskId,
+                projectName: favorite.projectName,
+                taskName: favorite.taskName,
+                note: favorite.note
+            )
+        } else {
+            saved.append(favorite)
+        }
+        favorites = saved
+    }
+
+    func removeFavorite(_ favorite: TimeFavorite) {
+        favorites = favorites.filter { $0.id != favorite.id }
+    }
+
+    func startFavorite(_ favorite: TimeFavorite) async {
+        guard let project = projects.first(where: { $0.id == favorite.projectId }),
+              project.tasks.contains(where: { $0.id == favorite.taskId }) else {
+            error = "Der Favorit ist nicht mehr verfügbar. Bitte Projekte neu laden."
+            return
+        }
+        projectId = favorite.projectId
+        taskId = favorite.taskId
+        note = favorite.note
+        await checkIn()
     }
 
     private func tick() {
@@ -144,7 +253,10 @@ final class Store: ObservableObject {
     func mocoHoursByDay(from: String, to: String) async throws -> [String: Double] {
         var result: [String: Double] = [:]
         for a in try await client.activities(from: from, to: to) {
-            if let d = a.date { result[d, default: 0] += a.hours }
+            if let d = a.date {
+                result[d, default: 0] += a.hours
+                if a.timer_started_at != nil { result[d, default: 0] += runningSeconds(a) / 3600 }
+            }
         }
         return result
     }

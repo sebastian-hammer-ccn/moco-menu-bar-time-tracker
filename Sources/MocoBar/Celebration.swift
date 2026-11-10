@@ -14,8 +14,8 @@ enum Celebration {
         content.title = "Feierabend! 🎉"
         content.body = "Tagesziel erreicht: \(Store.format(hours: hours))"
         content.sound = .default
-        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
         confetti()
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
     }
 
     static func confetti() {

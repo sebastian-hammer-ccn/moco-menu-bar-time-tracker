@@ -24,6 +24,11 @@ struct MocoBarApp: App {
         }
         .defaultSize(width: 420, height: 460)
 
+        Window("Wochen- und Monatsübersicht", id: "reports") {
+            ReportsView().environmentObject(store)
+        }
+        .defaultSize(width: 460, height: 560)
+
         Window("Zeitabgleich", id: "reconcile") {
             ReconcileView().environmentObject(store)
         }
@@ -31,9 +36,15 @@ struct MocoBarApp: App {
     }
 }
 
+@MainActor
+final class SettingsModel: ObservableObject {
+    @Published var apiKeyDraft = ""
+}
+
 struct SettingsView: View {
     @EnvironmentObject var store: Store
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var model = SettingsModel()
 
     private func timeBinding(_ minutes: Binding<Int>) -> Binding<Date> {
         Binding(
@@ -49,11 +60,24 @@ struct SettingsView: View {
         let theme = store.theme
         VStack(alignment: .leading, spacing: 10) {
             Field(icon: "globe", tint: .blue) { TextField("Moco-Domain (z. B. firma)", text: store.$domain).textFieldStyle(.plain) }
-            Field(icon: "key.fill", tint: .orange) { SecureField("API-Key", text: store.$apiKey).textFieldStyle(.plain) }
+            Field(icon: "key.fill", tint: .orange) {
+                SecureField("API-Key", text: $model.apiKeyDraft).textFieldStyle(.plain)
+            }
+            Text("Der API-Key wird im macOS-Schlüsselbund gespeichert.")
+                .font(.caption2).foregroundStyle(theme.secondaryText)
+            if let error = store.credentialError {
+                Text(error).font(.caption).foregroundStyle(.red)
+            }
             Field(icon: "target", tint: .green) {
-                Text("Tagesziel (Stunden)")
+                Text(store.weekdayGoalsOn ? "Standard-Tagesziel" : "Tagesziel (Stunden)")
                 Spacer()
                 TextField("8", value: store.$dailyGoal, format: .number).textFieldStyle(.plain).frame(width: 50).multilineTextAlignment(.trailing)
+                    .disabled(store.weekdayGoalsOn)
+            }
+            .opacity(store.weekdayGoalsOn ? 0.55 : 1)
+            if store.weekdayGoalsOn {
+                Text("Bei aktivierten Wochentagszielen werden die einzelnen Werte verwendet.")
+                    .font(.caption2).foregroundStyle(theme.secondaryText)
             }
             Field(icon: "calendar", tint: .green) {
                 Text("Ziel pro Wochentag").lineLimit(1)
@@ -111,12 +135,17 @@ struct SettingsView: View {
                 Spacer()
                 Toggle("", isOn: Binding(get: { store.launchAtLogin }, set: { store.setLaunchAtLogin($0) })).toggleStyle(.switch).labelsHidden()
             }
-            Button { dismiss(); Task { await store.refresh(); await store.loadProjects() } } label: { Label("Speichern & neu laden", systemImage: "checkmark.circle.fill") }
+            Button {
+                guard store.setAPIKey(model.apiKeyDraft) else { return }
+                dismiss()
+                Task { await store.refresh(); await store.loadProjects() }
+            } label: { Label("Speichern & neu laden", systemImage: "checkmark.circle.fill") }
                 .buttonStyle(FilledButtonStyle(theme: theme, color: .blue))
         }
         .padding(20)
         .frame(width: 380)
         .themed(theme)
+        .onAppear { model.apiKeyDraft = store.apiKey }
     }
 }
 
@@ -156,19 +185,23 @@ struct Field<Content: View>: View {
 }
 
 struct FilledButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
     let theme: Theme
     let color: Color
     func makeBody(configuration: Configuration) -> some View {
-        let fill: AnyShapeStyle = theme.isColorful
-            ? AnyShapeStyle(LinearGradient(colors: [color, color.opacity(0.75)], startPoint: .top, endPoint: .bottom))
-            : AnyShapeStyle(color)
+        let fill: AnyShapeStyle = !isEnabled
+            ? AnyShapeStyle(Color.gray)
+            : theme.isColorful
+                ? AnyShapeStyle(LinearGradient(colors: [color, color.opacity(0.75)], startPoint: .top, endPoint: .bottom))
+                : AnyShapeStyle(color)
         configuration.label
             .font(.system(.body, design: .rounded).weight(.semibold))
             .foregroundStyle(.white)
             .padding(.vertical, 9)
             .frame(maxWidth: .infinity)
             .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(fill))
-            .opacity(configuration.isPressed ? 0.7 : 1)
+            .opacity(!isEnabled ? 0.5 : (configuration.isPressed ? 0.7 : 1))
     }
 }
 
@@ -200,6 +233,7 @@ struct ContentView: View {
             header
             summary
             inputs
+            favoriteControls
             buttons
 
             if let e = store.error {
@@ -222,6 +256,7 @@ struct ContentView: View {
         .frame(width: 340)
         .fixedSize(horizontal: false, vertical: true)
         .themed(theme)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private var header: some View {
@@ -235,6 +270,7 @@ struct ContentView: View {
             if store.loading { ProgressView().controlSize(.small) }
             Button { Task { await store.refresh() } } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.borderless).foregroundStyle(t.secondaryText)
             Button { openWindow(id: "history"); NSApp.activate(ignoringOtherApps: true) } label: { Image(systemName: "calendar") }.buttonStyle(.borderless).foregroundStyle(t.secondaryText).help("Gebuchte Zeiten ansehen")
+            Button { openWindow(id: "reports"); NSApp.activate(ignoringOtherApps: true) } label: { Image(systemName: "chart.bar.xaxis") }.buttonStyle(.borderless).foregroundStyle(t.secondaryText).help("Wochen- und Monatsübersicht")
             Button { openWindow(id: "reconcile"); NSApp.activate(ignoringOtherApps: true) } label: { Image(systemName: "checklist") }.buttonStyle(.borderless).foregroundStyle(t.secondaryText).help("Mit Excel abgleichen")
             Button { openWindow(id: "settings"); NSApp.activate(ignoringOtherApps: true) } label: { Image(systemName: "gearshape") }.buttonStyle(.borderless).foregroundStyle(t.secondaryText)
         }
@@ -320,6 +356,47 @@ struct ContentView: View {
         }
     }
 
+    @ViewBuilder private var favoriteControls: some View {
+        if !store.favorites.isEmpty || store.selectionValid {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Schnellstart").font(.caption.weight(.semibold)).foregroundStyle(store.theme.secondaryText)
+                    Spacer()
+                    if store.selectionValid {
+                        Button { store.addFavorite() } label: { Label("Auswahl merken", systemImage: "star") }
+                            .font(.caption).buttonStyle(.borderless).foregroundStyle(store.theme.accent)
+                    }
+                }
+                if !store.favorites.isEmpty {
+                    ScrollView(.horizontal) {
+                        HStack(spacing: 6) {
+                            ForEach(store.favorites) { favorite in
+                                Button {
+                                    Task { await store.startFavorite(favorite) }
+                                } label: {
+                                    Label("\(favorite.projectName) · \(favorite.taskName)", systemImage: "play.fill")
+                                        .font(.caption).lineLimit(1)
+                                        .padding(.horizontal, 9).padding(.vertical, 6)
+                                        .background(Capsule().fill(store.theme.fieldFill))
+                                }
+                                .buttonStyle(.plain)
+                                .foregroundStyle(store.theme.text)
+                                .disabled(store.isCheckedIn || store.loading)
+                                .help(favorite.note.isEmpty ? "Schnellstart starten" : favorite.note)
+                                .contextMenu {
+                                    Button("Favorit löschen", systemImage: "trash", role: .destructive) {
+                                        store.removeFavorite(favorite)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .scrollIndicators(.hidden)
+                }
+            }
+        }
+    }
+
     private var buttons: some View {
         let t = store.theme
         return VStack(spacing: 8) {
@@ -333,7 +410,7 @@ struct ContentView: View {
             }
             Button { Task { await store.book() } } label: { Label("Dauer buchen", systemImage: "plus.circle.fill") }
                 .buttonStyle(FilledButtonStyle(theme: t, color: t.isColorful ? .blue : t.accent))
-                .disabled(store.duration.isEmpty || store.loading)
+                .disabled(store.duration.isEmpty || store.note.isEmpty || store.loading)
         }
     }
 

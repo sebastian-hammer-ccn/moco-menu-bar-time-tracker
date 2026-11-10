@@ -15,6 +15,9 @@ Kleine macOS-Menüleisten-App, um Zeiten in [Moco](https://www.mocoapp.com) zu e
 - **Neuer Tag:** Wechselt das Datum (z. B. über Nacht), lädt die Oberfläche automatisch neu.
 - **Feierabend-Feier:** Sobald bei laufender Stoppuhr das Tagesziel erreicht ist, gibt es einmal pro Tag eine Benachrichtigung und Konfetti über den Bildschirm. Beim ersten Start fragt macOS nach der Erlaubnis für Benachrichtigungen.
 - **Gebuchte Zeiten:** Das Kalender-Symbol im Kopfbereich öffnet eine Ansicht, in der du per Pfeilen oder Datumswähler beliebige vergangene Tage ansehen kannst (Buchungen mit Projekt, Aufgabe, Notiz, Tagessumme). Dauer und Notiz lassen sich dort ändern, Buchungen auch löschen (nicht bei laufender Stoppuhr).
+- **Wochen- und Monatsübersicht:** Das Diagramm-Symbol zeigt die gebuchten Stunden und Tagesziele für die aktuelle oder eine vergangene Kalenderwoche bzw. einen Monat, inklusive Tagesaufschlüsselung und Soll-Ist-Abweichung.
+- **Favoriten und Schnellstart:** Häufige Projekt-Aufgabe-Notiz-Kombinationen lassen sich merken und mit einem Klick als Stoppuhr starten. Über das Kontextmenü eines Favoriten kann er entfernt werden.
+- **Sicherer API-Key:** Der API-Key wird im macOS-Schlüsselbund gespeichert. Ein bisher in den UserDefaults gespeicherter Schlüssel wird beim Start dorthin migriert und erst nach erfolgreicher Übernahme aus den UserDefaults entfernt.
 - **Autostart:** Beim ersten Start wird MocoBar für den Login registriert. Der Schalter „Beim Login starten“ in den Einstellungen ändert das jederzeit.
 - **Menüleisten-Icon:** aus mehreren Symbolen wählbar, optional mit der laufenden Zeit neben dem Icon.
 
@@ -68,6 +71,9 @@ Danach erscheinen Projekt und Aufgabe zur Auswahl. Die letzte Auswahl wird gemer
 | Stoppuhr beenden | **Stopp** |
 | Zeit nachtragen | Dauer eintippen (z. B. `2h`), optional Notiz, **Dauer buchen** |
 | Vergangene Tage ansehen/bearbeiten | Kalender-Symbol im Kopfbereich |
+| Wochen-/Monatsstunden ansehen | Diagramm-Symbol im Kopfbereich |
+| Favorit starten | Schnellstart-Chip im Popover |
+| Favorit speichern/löschen | „Auswahl merken“ bzw. Rechtsklick auf Favorit |
 | Daten neu laden | Aktualisieren-Symbol im Kopfbereich |
 
 ## Technik
@@ -84,11 +90,13 @@ Danach erscheinen Projekt und Aufgabe zur Auswahl. Die letzte Auswahl wird gemer
   - `Store.swift`: Zustand und Logik
   - `MocoClient.swift`: API-Aufrufe
   - `HistoryView.swift`: Ansicht „Gebuchte Zeiten“
+  - `ReportsView.swift` / `TimeReport.swift`: Wochen- und Monatsübersicht
+  - `KeychainStore.swift`: sichere Speicherung des API-Keys
   - `Celebration.swift`: Benachrichtigung und Konfetti
   - `Theme.swift`: Designs
 - App-Icon: `Resources/AppIcon.icns` (Moco-Auge mit Codecamp-Wabe als Iris). Neu erzeugen mit `swift Resources/make-icon.swift`; `build-app.sh` kopiert es ins App-Bundle.
 
 ## Hinweise
 
-- Domain, API-Key und Einstellungen liegen in den macOS-UserDefaults (`local.mocobar`), der Key also nicht in der Keychain.
+- Domain und übrige Einstellungen liegen in den macOS-UserDefaults (`local.mocobar`); der API-Key liegt im macOS-Schlüsselbund.
 - Die App nutzt Mocos Stoppuhr und Buchungen. Das Anwesenheits-Modul (Kommen/Gehen) von Moco wird nicht verwendet, da es nicht in jedem Account verfügbar ist.

@@ -8,7 +8,7 @@ struct ExcelDay: Identifiable {
     var spans: [String] = []
 }
 
-enum ReconcileStatus { case ok, tooLittle, tooMuch, missingInMoco, onlyInMoco }
+enum ReconcileStatus: Equatable { case ok, tooLittle, tooMuch, missingInMoco, onlyInMoco }
 
 struct ReconcileRow: Identifiable {
     var id: String { date }
