@@ -84,7 +84,7 @@ struct HistoryView: View {
 
     private func row(_ a: Activity) -> some View {
         let t = store.theme
-        let editable = a.timer_started_at == nil
+        let editable = store.running?.id != a.id
         return HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 1) {
                 Text(a.project?.name ?? "–").font(.callout.weight(.semibold)).lineLimit(1).foregroundStyle(t.text)
